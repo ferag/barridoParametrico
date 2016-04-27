@@ -21,14 +21,25 @@
     #
     # Set the config file here
     # 
-export NETCDF_LIBS=-I/gpfs/csic_users/aguilarf/lib
-export NETCDF_CFLAGS=-I/gpfs/csic_users/aguilarf/include/
+export NETCDF_LIBS=<path to NETCDLIB>
+export NETCDF_CFLAGS=<path to NETCDFLIB>
 module load gcc/4.9.2
 echo $PATH
+export BASE_PATH=/path/to/origin/path(taken from command line)
+export OUTPUT_PATH=/path/to/new/path(automatic)
+echo $SLURM_JOBID
+export TMPDIR=/scratch/$SLURM_JOBID
+mkdir $TMPDIR
+cd $TMPDIR
 
-inpfile=wqnew_basic2_t26.inp
+echo "Copying base files"
+cp $BASE_PATH/* $TMPDIR
+echo "Copying config files"
+cp $OUTPUT_PATH/* $TMPDIR
 
-currentdir=`pwd`
+inpfile=wqnew_basic2_t26_2.inp
+
+currentdir=$TMPDIR
 echo $currentdir
 argfile=$currentdir/$inpfile
 
@@ -39,9 +50,9 @@ argfile=$currentdir/$inpfile
 #exedir=$currentdir/../bin/lnx/waq/bin
 #export LD_LIBRARY_PATH=$exedir:$LD_LIBRARY_PATH 
 #procfile=$currentdir/../bin/lnx/waq/default/proc_def
-exedir=/gpfs/csic_users/aguilarf/delft3d_v2/bin/lnx64/waq/bin
+exedir=<exe_dir>
 export LD_LIBRARY_PATH=$exedir:$LD_LIBRARY_PATH
-procfile=/gpfs/csic_users/aguilarf/delft3d_v2/bin/lnx64/waq/default/proc_def
+procfile=<proc_def>
     #
     # Run delwaq 1
     #
@@ -73,3 +84,14 @@ else
     echo ""
     echo "Delwaq1 did not run correctly, ending calculation"
 fi
+
+cp $TMPDIR/*.hda $OUTPUT_PATH
+cp $TMPDIR/*.hdf $OUTPUT_PATH
+cp $TMPDIR/*.ada $OUTPUT_PATH
+cp $TMPDIR/*.cco $OUTPUT_PATH
+cp $TMPDIR/*.lga $OUTPUT_PATH
+cp $TMPDIR/*.lsp $OUTPUT_PATH
+cp $TMPDIR/*.lst $OUTPUT_PAT
+rm -rf $TMPDIR/*
+rm -rf $TMPDIR
+echo "FINISHED"

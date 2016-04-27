@@ -41,6 +41,7 @@ def config(filename,inputFile,username,password,path):
         if index>0:
             if row[2] > iteration:
                 if iteration > -1:
+                    print "Launch Job Iteration#" + iteration
 		    launchJob(inputFile,username,password,path,iteration)
 		iteration = row[2]
                 print "Iteration #" + iteration
@@ -51,6 +52,10 @@ def config(filename,inputFile,username,password,path):
 
             print "Param: " + row[0] + " Value: " + row[1]
             modInputFile(inputFile.rsplit( ".", 1 )[ 0 ] + "_" + iteration + ".inp", row[0], row[1])
+
+    #Launch Last iteration
+    print "Launch Job Iteration#" + iteration
+    launchJob(inputFile,username,password,path,iteration)
 
 def modInputFile(inputFile, paramName, value):
     """Modifies the input File with the new value of a Param.
@@ -105,23 +110,41 @@ def launchJob(inputFile, username, password, path, iteration):
     ?
     """
     newInputFile = inputFile.rsplit( ".", 1 )[ 0 ] + "_" + iteration + ".inp"
-    command = "ssh {0}@altamira1.ifca.es 'cp -r {1} {2}'".format(username, path, path + "_" + iteration)
+    command = "ssh {0}@altamira1.ifca.es 'mkdir {1}'".format(username, path + "_" + iteration)
     print command
     print "Creating base directory..."
     os.system(command)
     
-    #Change in run_waq
-    command = "ssh {0}@altamira1.ifca.es 'cd {1} ; sed -i\"run_delwaq.sh\" \'24d\' run_delwaq.sh; sed -i\"run_delwaq.sh\" '24iinpfile={2}' run_delwaq.sh'".format(username,path + "_" + iteration, newInputFile, inputFile.rsplit( ".", 1 )[ 0 ], inputFile.rsplit( ".", 1 )[ 0 ] + "_" + iteration )
+
+    #Changes in run_waq
+    #Change inp file
+    command = "sed -i\"run_delwaq.sh\" \'40d\' run_delwaq.sh; sed -i\"run_delwaq.sh\" '40iinpfile={2}' 'run_delwaq.sh'".format(username,path + "_" + iteration, newInputFile, inputFile.rsplit( ".", 1 )[ 0 ], inputFile.rsplit( ".", 1 )[ 0 ] + "_" + iteration )
 
     #if we need to change names: mv {3}.scn {4}.scn ; mv {3}.par {4}.par ; mv {3}.res {4}.res
     print "Preparing files"
     print command
     os.system(command)
     
+    #Change BASE_PATH
+    command = "sed -i\"run_delwaq.sh\" \'28d\' run_delwaq.sh; sed -i\"run_delwaq.sh\" '28iexport BASE_PATH={0}' 'run_delwaq.sh'".format(path)
+    print "Changing BASE_PATH"
+    print command
+    os.system(command)
+
+    command = "sed -i\"run_delwaq.sh\" \'29d\' run_delwaq.sh; sed -i\"run_delwaq.sh\" '29iexport OUTPUT_PATH={0}' 'run_delwaq.sh'".format(path + "_" + iteration)
+    print "Changing OUTPUT_PATH"
+    print command
+    os.system(command)
+    
+    #Send input files
     command = "scp {0} {1}@altamira1.ifca.es:/{2}".format(newInputFile,username,path + "_" + iteration)
     print "Sending input file"
     os.system(command)
+
+    command = "scp {0} {1}@altamira1.ifca.es:/{2}".format("run_delwaq.sh",username,path + "_" + iteration)
+    os.system(command)
     
+    #Job Submission
     command = "ssh {0}@altamira1.ifca.es 'cd {1} ; mnsubmit run_delwaq.sh'".format(username,path + "_" + iteration)
     print "Job submission"
     print command
